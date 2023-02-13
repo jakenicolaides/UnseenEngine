@@ -143,14 +143,27 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="C:\IMGUI\backends\imgui_impl_glfw.cpp" />
-    <ClCompile Include="C:\IMGUI\backends\imgui_impl_vulkan.cpp" />
-    <ClCompile Include="C:\IMGUI\imgui.cpp" />
-    <ClCompile Include="C:\IMGUI\imgui_demo.cpp" />
-    <ClCompile Include="C:\IMGUI\imgui_draw.cpp" />
-    <ClCompile Include="C:\IMGUI\imgui_tables.cpp" />
-    <ClCompile Include="C:\IMGUI\imgui_widgets.cpp" />
+    <ClCompile Include="..\IMGUI\backends\imgui_impl_glfw.cpp" />
+    <ClCompile Include="..\IMGUI\backends\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="..\IMGUI\imgui.cpp" />
+    <ClCompile Include="..\IMGUI\imgui_demo.cpp" />
+    <ClCompile Include="..\IMGUI\imgui_draw.cpp" />
+    <ClCompile Include="..\IMGUI\imgui_tables.cpp" />
+    <ClCompile Include="..\IMGUI\imgui_widgets.cpp" />
+    <ClCompile Include="EngineUI.cpp" />
+    <ClCompile Include="FileBrowser.cpp" />
     <ClCompile Include="UnseenEngine.cpp" />
+    <ClCompile Include="Rendering.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\frag.spv" />
+    <None Include="shaders\vert.spv" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="EngineUI.h" />
+    <ClInclude Include="FileBrowser.h" />
+    <ClInclude Include="Rendering.h" />
+    <ClInclude Include="UnseenEngine.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
