@@ -8,6 +8,7 @@
 #include <fstream>
 #include <set>
 #include <chrono>
+#include <vector>
 #include <iostream>
 #include "EngineUI.h"
 
@@ -1553,12 +1554,19 @@ void Rendering::drawFrame() {
 
 }
 
-VkShaderModule Rendering::createShaderModule(const std::vector<char>& code) {
+VkShaderModule Rendering::createShaderModule(const std::vector<char> &code) {
+
+    // Calculate the size of the code vector after padding
+    size_t paddedSize = code.size() + (4 - (code.size() % 4)) % 4;
+
+    // Create a new vector with the padded size and copy the original code
+    std::vector<char> paddedCode(paddedSize);
+    std::memcpy(paddedCode.data(), code.data(), code.size());
+
     VkShaderModuleCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    createInfo.codeSize = code.size();
-    createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
-
+    createInfo.pCode = reinterpret_cast<const uint32_t*>(paddedCode.data());
+    createInfo.codeSize = paddedCode.size();
     VkShaderModule shaderModule;
     if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
         throw std::runtime_error("failed to create shader module!");

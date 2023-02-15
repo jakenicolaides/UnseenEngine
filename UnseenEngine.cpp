@@ -31,6 +31,8 @@ Constants: Constants are named using all uppercase letters, with words separated
 
 #include "UnseenEngine.h"
 #include "Rendering.h"
+#include "FileBrowser.h"
+#include "Functions.h"
 #include <iostream>
 #include <vector>
 #include <string>
@@ -61,5 +63,8 @@ void initEngine() {
 
     engineInitialised_ = true;
     std::cout << "Engine Initialised" << std::endl;
+    FileBrowser::Folder* rootFolder = FileBrowser::getRootFolder();
+
+
   
 }

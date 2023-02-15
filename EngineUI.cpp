@@ -3,6 +3,28 @@
 #include <iostream>
 #include <imgui.h>
 
+
+void renderFolderTree(FileBrowser::Folder* folder, bool isExpanded = false, int depth = 0)
+{
+    ImGui::PushID(folder->name.c_str());
+
+    bool nodeExpanded = ImGui::TreeNodeEx(folder->name.c_str(), ImGuiTreeNodeFlags_DefaultOpen * isExpanded);
+
+    
+
+    if (nodeExpanded)
+    {
+        for (FileBrowser::Folder* child : folder->children)
+        {
+            renderFolderTree(child, false, depth + 1);
+        }
+
+        ImGui::TreePop();
+    }
+
+    ImGui::PopID();
+}
+
 std::map<std::string, bool> EngineUI(std::map<std::string, bool> windowState) {
     //Docking
     ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -51,42 +73,17 @@ std::map<std::string, bool> EngineUI(std::map<std::string, bool> windowState) {
     // ContentBrowser
     if (windowState["showContentBrowser"])
     {
+
+        FileBrowser::Folder* rootFolder = FileBrowser::getRootFolder();
+        
         ImGui::Begin("ContentBrowser");
-        
-        std::vector<FileBrowser::DirectoryData> fileInfo = FileBrowser::getDirectoryData(true, "", true, false);
-        std::vector<FileBrowser::DirectoryData> folderInfo = FileBrowser::getDirectoryData(true, "", false, true);
-       
 
-        // By default, if we don't enable ScrollX the sizing policy for each column is "Stretch"
-        // All columns maintain a sizing weight, and they will occupy all available width.
-        static ImGuiTableFlags flags = ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_ContextMenuInBody;
-        
-        if (ImGui::BeginTable("table1", 2, flags))
-        {
-            for (int row = 0; row < 5; row++)
-            {
-              
-                ImGui::TableNextRow();
-                for (int column = 0; column < 2; column++)
-                {
-                    ImGui::TableSetColumnIndex(column);
-                    if (column == 0) {
-                        if (row < folderInfo.size()){
-                            ImGui::Text(folderInfo[row].name.c_str());
-                        }
-                    }else if(column == 1){
-                        if (row < fileInfo.size()) {
-                            ImGui::Text("Files");
-                        }
-                    }
-
-                }
-            }
-            ImGui::EndTable();
-        }
-        
+        renderFolderTree(rootFolder);
        
         ImGui::End();
+
+        
+       
         
     }
 
@@ -112,6 +109,3 @@ std::map<std::string, bool> EngineUI(std::map<std::string, bool> windowState) {
 
     return windowState;
 }
-
-
-

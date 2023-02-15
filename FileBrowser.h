@@ -6,15 +6,19 @@
 
 namespace FileBrowser {
 
-    struct DirectoryData
-    {
+    struct Folder {
         std::string name;
-        std::string type;
-        bool isFile;
+        std::vector<Folder*> children;
     };
 
+    struct Folder;
 
-    std::vector<DirectoryData> getDirectoryData(bool getCurrentDirectory, std::string directory, bool getFiles, bool getFolders);
-    void logCurrentDirectory();
+    void createFolderTree(const std::string& path, Folder* folder);
+
+    std::string getFolderTree(Folder* folder, int depth );
+
+    int logRootFiles();
+
+    Folder* getRootFolder();
 
 }

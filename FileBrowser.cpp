@@ -1,51 +1,53 @@
 #include "FileBrowser.h"
 #include <iostream>
+#include <filesystem>
 
 namespace FileBrowser {
 
-    std::string currentDirectory = std::filesystem::current_path().string() + "\\content";
 
-    std::vector<DirectoryData> getDirectoryData(bool getCurrentDirectory, std::string directory, bool getFiles, bool getFolders)
-    {
-        if (getCurrentDirectory) {
-            directory = currentDirectory;
-        }
-
-        std::vector<DirectoryData> fileInformation;
-        for (const auto& entry : std::filesystem::directory_iterator(directory))
-        {
-            if (entry.is_regular_file() && getFiles)
-            {
-                DirectoryData fileInfo;
-                fileInfo.name = entry.path().filename().string();
-                fileInfo.type = entry.path().extension().string();
-                fileInfo.isFile = true;
-                fileInformation.push_back(fileInfo);
-            }
-            else if (entry.is_directory() && getFolders)
-            {
-                DirectoryData fileInfo;
-                fileInfo.name = entry.path().filename().string();
-                fileInfo.type = "";
-                fileInfo.isFile = false;
-                fileInformation.push_back(fileInfo);
+    void createFolderTree(const std::string& path, Folder* folder) {
+        for (const auto& entry : std::filesystem::directory_iterator(path)) {
+            if (entry.is_directory()) {
+                auto childFolder = new Folder;
+                childFolder->name = entry.path().filename().string();
+                createFolderTree(entry.path().string(), childFolder);
+                folder->children.push_back(childFolder);
             }
         }
-        return fileInformation;
     }
 
-    void logCurrentDirectory() {
-
-        
-        std::vector<DirectoryData> FileInformation = getDirectoryData(true, "", true, true);
-
-        std::cout << "Name\t\tType\t\n";
-        for (int i = 0; i < FileInformation.size(); i++)
-        {
-            std::cout << FileInformation[i].name << "\t\t" << FileInformation[i].type << std::endl;
+    std::string getFolderTree(Folder* folder, int depth = 0) {
+        std::string result;
+        if (folder != nullptr) {
+            for (int i = 0; i < depth; i++) {
+                result += "  ";
+            }
+            result += "+ " + folder->name + "\n";
+            for (auto child : folder->children) {
+                result += getFolderTree(child, depth + 1);
+            }
         }
-        
-
+        return result;
     }
+
+    int logRootFiles() {
+        std::string rootPath = std::filesystem::current_path().string() + "\\content";;
+        auto rootFolder = new Folder;
+        rootFolder->name = rootPath;
+        createFolderTree(rootPath, rootFolder);
+        //printFolderTree(rootFolder);
+        return 0;
+    }
+
+    Folder* getRootFolder() {
+        std::string rootPath = std::filesystem::current_path().string() + "\\content";;
+        auto rootFolder = new Folder;
+        rootFolder->name = rootPath;
+        createFolderTree(rootPath, rootFolder);
+        return rootFolder;
+    }
+
+
+
 
 }
