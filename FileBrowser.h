@@ -6,19 +6,25 @@
 
 namespace FileBrowser {
 
-    struct Folder {
+    struct DirectoryItem {
+        std::string id;
         std::string name;
-        std::vector<Folder*> children;
+        std::string path;
+        std::string parentPath;
+        bool isFolder;
     };
+    
+    std::vector<DirectoryItem> getGameFiles(const std::string& pathToGameFiles);
+    void printGameFiles(std::vector<DirectoryItem> gameFiles);
+    int LaunchBlenderWithFBX(std::string fbxPath);
 
-    struct Folder;
+    bool renameFolder(std::string& path, const std::string& newName);
 
-    void createFolderTree(const std::string& path, Folder* folder);
+    std::string getParentDirectory(std::string path);
 
-    std::string getFolderTree(Folder* folder, int depth );
+    bool deleteFileOrFolder(std::wstring path);
 
-    int logRootFiles();
-
-    Folder* getRootFolder();
+    bool createDirectory(const std::string& path);
+   
 
 }

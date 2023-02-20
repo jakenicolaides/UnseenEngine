@@ -13,8 +13,8 @@
 
 const uint32_t WIDTH = 2880;
 const uint32_t HEIGHT = 1620;
-const std::string MODEL_PATH = "content/models/metalfish.obj";
-const std::string TEXTURE_PATH = "content/textures/metalfish.png";
+const std::string MODEL_PATH = "content/SpiritLens/models/metalfish.obj";
+const std::string TEXTURE_PATH = "content/SpiritLens/textures/metalfish.png";
 const std::string ENGINE_TITLE = "Unseen Engine 2023";
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
@@ -78,11 +78,32 @@ struct UniformBufferObject {
     alignas(16) glm::mat4 proj;
 };
 
+// A struct to manage data related to one image in vulkan
+struct ImGuiTextureData
+{
+    VkDescriptorSet DS;         // Descriptor set: this is what you'll pass to Image()
+    int             Width;
+    int             Height;
+    int             Channels;
+
+    // Need to keep track of these to properly cleanup
+    VkImageView     ImageView;
+    VkImage         Image;
+    VkDeviceMemory  ImageMemory;
+    VkSampler       Sampler;
+    VkBuffer        UploadBuffer;
+    VkDeviceMemory  UploadBufferMemory;
+
+    ImGuiTextureData() { memset(this, 0, sizeof(*this)); }
+};
+
 //Start of rendering class declarations
 
 class Rendering {
 public:
     void start();
+    bool LoadTextureFromFile(const char* filename, ImGuiTextureData* tex_data);
+    void RemoveTexture(ImGuiTextureData* tex_data);
 private:
     GLFWwindow* window;
     VkInstance instance;
@@ -131,6 +152,9 @@ private:
     std::vector<VkSemaphore> renderFinishedSemaphores;
     std::vector<VkFence> inFlightFences;
     uint32_t currentFrame = 0;
+
+    VkDescriptorPool imguiPool;
+
 
     bool framebufferResized = false;
 
@@ -197,5 +221,6 @@ private:
     bool checkValidationLayerSupport();
     static std::vector<char> readFile(const std::string& filename);
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
-      
+   
+
 };
