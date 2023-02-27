@@ -114,14 +114,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VMA\include;C:\NLOHMANN\include;C:\YAML\include;C:\IMGUI;C:\VulkanSDK\1.3.239.0\Include;C:\GLFW\include\GLFW;C:\GLM\glm;C:\STB;C:\TinyOBJ;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\UnseenEngine\Vendors\VMA\include;C:\UnseenEngine\Vendors\NLOHMANN\include;C:\UnseenEngine\Vendors\YAML\include;C:\UnseenEngine\Vendors\IMGUI;C:\VulkanSDK\1.3.239.0\Include;C:\UnseenEngine\Vendors\GLFW\include\GLFW;C:\UnseenEngine\Vendors\GLM\glm;C:\UnseenEngine\Vendors\STB;C:\UnseenEngine\Vendors\TINYOBJ;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\YAML\build\Debug;C:\VulkanSDK\1.3.239.0\Lib;C:\GLFW\lib-vc2015;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\UnseenEngine\Vendors\YAML\build\Debug;C:\VulkanSDK\1.3.239.0\Lib;C:\UnseenEngine\Vendors\GLFW\lib-vc2015;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>yaml-cppd.lib;vulkan-1.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
     </Link>
@@ -148,13 +148,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\IMGUI\backends\imgui_impl_glfw.cpp" />
-    <ClCompile Include="..\IMGUI\backends\imgui_impl_vulkan.cpp" />
-    <ClCompile Include="..\IMGUI\imgui.cpp" />
-    <ClCompile Include="..\IMGUI\imgui_demo.cpp" />
-    <ClCompile Include="..\IMGUI\imgui_draw.cpp" />
-    <ClCompile Include="..\IMGUI\imgui_tables.cpp" />
-    <ClCompile Include="..\IMGUI\imgui_widgets.cpp" />
     <ClCompile Include="Debug.cpp" />
     <ClCompile Include="EngineUI.cpp" />
     <ClCompile Include="FileBrowser.cpp" />
@@ -162,6 +155,13 @@
     <ClCompile Include="Serialization.cpp" />
     <ClCompile Include="UnseenEngine.cpp" />
     <ClCompile Include="Rendering.cpp" />
+    <ClCompile Include="Vendors\IMGUI\backends\imgui_impl_glfw.cpp" />
+    <ClCompile Include="Vendors\IMGUI\backends\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="Vendors\IMGUI\imgui.cpp" />
+    <ClCompile Include="Vendors\IMGUI\imgui_demo.cpp" />
+    <ClCompile Include="Vendors\IMGUI\imgui_draw.cpp" />
+    <ClCompile Include="Vendors\IMGUI\imgui_tables.cpp" />
+    <ClCompile Include="Vendors\IMGUI\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\frag.spv" />
@@ -175,6 +175,12 @@
     <ClInclude Include="Rendering.h" />
     <ClInclude Include="Serialization.h" />
     <ClInclude Include="UnseenEngine.h" />
+    <ClInclude Include="Vendors\IMGUI\imconfig.h" />
+    <ClInclude Include="Vendors\IMGUI\imgui.h" />
+    <ClInclude Include="Vendors\IMGUI\imgui_internal.h" />
+    <ClInclude Include="Vendors\IMGUI\imstb_rectpack.h" />
+    <ClInclude Include="Vendors\IMGUI\imstb_textedit.h" />
+    <ClInclude Include="Vendors\IMGUI\imstb_truetype.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

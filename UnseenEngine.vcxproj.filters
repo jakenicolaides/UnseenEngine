@@ -45,26 +45,26 @@
     <ClCompile Include="Serialization.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\IMGUI\imgui.cpp">
-      <Filter>Source Files\vendor\imgui</Filter>
+    <ClCompile Include="Vendors\IMGUI\backends\imgui_impl_glfw.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\IMGUI\imgui_demo.cpp">
-      <Filter>Source Files\vendor\imgui</Filter>
+    <ClCompile Include="Vendors\IMGUI\backends\imgui_impl_vulkan.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\IMGUI\imgui_draw.cpp">
-      <Filter>Source Files\vendor\imgui</Filter>
+    <ClCompile Include="Vendors\IMGUI\imgui.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\IMGUI\backends\imgui_impl_glfw.cpp">
-      <Filter>Source Files\vendor\imgui</Filter>
+    <ClCompile Include="Vendors\IMGUI\imgui_demo.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\IMGUI\backends\imgui_impl_vulkan.cpp">
-      <Filter>Source Files\vendor\imgui</Filter>
+    <ClCompile Include="Vendors\IMGUI\imgui_draw.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\IMGUI\imgui_tables.cpp">
-      <Filter>Source Files\vendor\imgui</Filter>
+    <ClCompile Include="Vendors\IMGUI\imgui_tables.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\IMGUI\imgui_widgets.cpp">
-      <Filter>Source Files\vendor\imgui</Filter>
+    <ClCompile Include="Vendors\IMGUI\imgui_widgets.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -95,6 +95,24 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Serialization.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vendors\IMGUI\imconfig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vendors\IMGUI\imgui.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vendors\IMGUI\imgui_internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vendors\IMGUI\imstb_rectpack.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vendors\IMGUI\imstb_textedit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vendors\IMGUI\imstb_truetype.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -145,13 +145,9 @@ private:
     VkImage textureImage;
     VkDeviceMemory textureImageMemory;
     VkImageView textureImageView;
-    VkSampler textureSampler;
-    std::vector<Vertex> vertices;
-    std::vector<uint32_t> indices;
-   // VkBuffer vertexBuffer;
-    //VkDeviceMemory vertexBufferMemory;
-   // VkBuffer indexBuffer;
-   // VkDeviceMemory indexBufferMemory;
+   // VkSampler textureSampler;
+    //std::vector<Vertex> vertices;
+    //std::vector<uint32_t> indices;
     std::vector<VkBuffer> uniformBuffers;
     std::vector<VkDeviceMemory> uniformBuffersMemory;
     std::vector<void*> uniformBuffersMapped;
@@ -207,11 +203,9 @@ private:
     VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
     VkFormat findDepthFormat();
     bool hasStencilComponent(VkFormat format);
-    void createTextureImage();
     void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
     VkSampleCountFlagBits getMaxUsableSampleCount();
     void createTextureImageView();
-    void createTextureSampler();
     VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels);
     void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
     void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
@@ -244,7 +238,7 @@ private:
     bool checkValidationLayerSupport();
     static std::vector<char> readFile(const std::string& filename);
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
-    VkImage createTextureImageNEW(std::string texturePath);
-    VkSampler createTextureSamplerNEW();
+    VkImage createTextureImage(std::string texturePath);
+    VkSampler createTextureSampler();
     void createVulkanMemoryAllocator();
 };
