@@ -16,6 +16,7 @@ struct LogEntry {
 
 struct Debug {
     void log(std::string message, LogSource source = Engine, LogType type = Message);
+    void clearLog();
     const std::vector<LogEntry>& getLogEntries();
     std::vector<LogEntry> logEntries;
     int logCount = 0;
@@ -23,4 +24,4 @@ struct Debug {
 
 std::string enumToString(LogSource source);
 
-static Debug debug;
+extern Debug debug;

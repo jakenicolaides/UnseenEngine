@@ -1,6 +1,6 @@
 #include "Rendering.h"
-
-
+#define NOMINMAX 
+#include <windows.h>
 #include <array>
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
@@ -11,6 +11,11 @@
 #include <vector>
 #include <iostream>
 #include "EngineUI.h"
+#include "Debug.h"
+
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
+
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -19,6 +24,9 @@
 #include <tiny_obj_loader.h>
 
 #include "UnseenEngine.h"
+
+RenderedModel renderedModels[1000];
+VmaAllocator vmaAllocator;
 
 
 //General rendering functions
@@ -80,7 +88,7 @@ bool Vertex::operator==(const Vertex& other) const {
 
 //Start of rendering class definitions
 
-void Rendering::start() {
+void Rendering::start(Entities &entities) {
     initWindow();
     initVulkan();
     initImgui();
@@ -119,15 +127,16 @@ void Rendering::initVulkan() {
     createColorResources();
     createDepthResources();
     createFramebuffers();
-    createTextureImage();
-    createTextureImageView();
-    createTextureSampler();
-    loadModel();
-    createVertexBuffer();
-    createIndexBuffer();
+    createVulkanMemoryAllocator();
+    //createTextureImage();
+   // createTextureImageView();
+    //createTextureSampler();
+    //loadModel();
+    //createVertexBuffer();
+    //createIndexBuffer();
     createUniformBuffers();
     createDescriptorPool();
-    createDescriptorSets();
+   // createDescriptorSets();
     createCommandBuffers();
     createSyncObjects();
 }
@@ -220,14 +229,27 @@ void Rendering::mainLoop() {
     while (!glfwWindowShouldClose(window) && applicationOpen) {
         glfwPollEvents();
 
+        //editor camera controls
+        if (EngineUI::getIsNavigatingViewport()) {
+            //glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+            double currentTime = glfwGetTime();
+            double deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+            updateCamera(window, deltaTime);
+        }
+        else {
+           // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        }
+
+
         //imgui new frame
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
-      
+
         engineLoop();
 
         ImGui::NewFrame();
-        EngineUI::loopUI(applicationOpen, this);
+        EngineUI::loopUI(applicationOpen, this, cameraSpeed, fov, firstMouse);
         ImGui::EndFrame();
 
         drawFrame();
@@ -279,11 +301,21 @@ void Rendering::cleanup() {
 
     vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
 
-    vkDestroyBuffer(device, indexBuffer, nullptr);
-    vkFreeMemory(device, indexBufferMemory, nullptr);
+   // vkDestroyBuffer(device, indexBuffer, nullptr);
+    //vkFreeMemory(device, indexBufferMemory, nullptr);
 
-    vkDestroyBuffer(device, vertexBuffer, nullptr);
-    vkFreeMemory(device, vertexBufferMemory, nullptr);
+    //vkDestroyBuffer(device, vertexBuffer, nullptr);
+    //vkFreeMemory(device, vertexBufferMemory, nullptr);
+
+    /*loop through models, cleaning up data*/
+    int size = sizeof(renderedModels) / sizeof(renderedModels[0]);
+    for (size_t i = 0; i < size; i++)
+    {
+        vkDestroyBuffer(device, renderedModels[i].indexBuffer, nullptr);
+        vkFreeMemory(device, renderedModels[i].indexBufferMemory, nullptr);
+        vkDestroyBuffer(device, renderedModels[i].vertexBuffer, nullptr);
+        vkFreeMemory(device, renderedModels[i].vertexBufferMemory, nullptr);
+    }
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
@@ -482,7 +514,7 @@ void Rendering::createSwapChain() {
     createInfo.minImageCount = imageCount;
     createInfo.imageFormat = surfaceFormat.format;
     createInfo.imageColorSpace = surfaceFormat.colorSpace;
-    createInfo.imageExtent = extent;
+    createInfo.imageExtent =  extent;
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
@@ -1120,6 +1152,7 @@ void Rendering::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width
 }
 
 void Rendering::loadModel() {
+
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -1158,7 +1191,9 @@ void Rendering::loadModel() {
     }
 }
 
+
 void Rendering::createVertexBuffer() {
+    /*
     VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
     VkBuffer stagingBuffer;
@@ -1176,9 +1211,11 @@ void Rendering::createVertexBuffer() {
 
     vkDestroyBuffer(device, stagingBuffer, nullptr);
     vkFreeMemory(device, stagingBufferMemory, nullptr);
+    */
 }
 
 void Rendering::createIndexBuffer() {
+    /*
     VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
     VkBuffer stagingBuffer;
@@ -1196,6 +1233,7 @@ void Rendering::createIndexBuffer() {
 
     vkDestroyBuffer(device, stagingBuffer, nullptr);
     vkFreeMemory(device, stagingBufferMemory, nullptr);
+    */
 }
 
 void Rendering::createUniformBuffers() {
@@ -1214,16 +1252,18 @@ void Rendering::createUniformBuffers() {
 
 void Rendering::createDescriptorPool() {
     std::array<VkDescriptorPoolSize, 2> poolSizes{};
+
+    
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-
+    poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT) * 1000;
+     
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
     poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT) * 1000;
 
     if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor pool!");
@@ -1412,18 +1452,31 @@ void Rendering::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imag
     scissor.extent = swapChainExtent;
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
+
+    /*This is where the model is drawn
     VkBuffer vertexBuffers[] = { vertexBuffer };
     VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-
     vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
-
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+    /*END of model draw*/
+
+    int size = sizeof(renderedModels) / sizeof(renderedModels[0]);
+    for (size_t i = 0; i < size; i++)
+    {
+        if (renderedModels[i].vertexBuffer != NULL) {
+            VkBuffer vertexBuffers[] = { renderedModels[i].vertexBuffer };
+            VkDeviceSize offsets[] = { 0 };
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+            vkCmdBindIndexBuffer(commandBuffer, renderedModels[i].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &renderedModels[i].descriptorSets[currentFrame], 0, nullptr);
+            vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(renderedModels[i].indices), 1, 0, 0, 0);
+        }
+    }
+    
 
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
-
     vkCmdEndRenderPass(commandBuffer);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
@@ -1453,16 +1506,25 @@ void Rendering::createSyncObjects() {
 }
 
 void Rendering::updateUniformBuffer(uint32_t currentImage) {
+
     static auto startTime = std::chrono::high_resolution_clock::now();
 
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
     UniformBufferObject ubo{};
-    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.model = glm::rotate(glm::mat4(1.0f), 0.0f, glm::vec3(0.0f, 0.0f, 1.0f));
+   
+    //This is our camera
+    // Calculate the view and projection matrices based on the camera position and orientation
+    ubo.view = glm::lookAt(cameraPosition, cameraPosition + cameraFront, cameraUp);
+    ubo.proj = glm::perspective(glm::radians(fov), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10000.0f);
+    ubo.proj[1][1] *= -1;
+    /*
     ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
     ubo.proj[1][1] *= -1;
+    */
 
     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 }
@@ -1484,8 +1546,6 @@ void Rendering::drawFrame() {
     else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         throw std::runtime_error("failed to acquire swap chain image!");
     }
-
-
 
     updateUniformBuffer(currentFrame);
 
@@ -1598,8 +1658,8 @@ VkExtent2D Rendering::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilit
             static_cast<uint32_t>(height)
         };
 
-        actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-        actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+       // actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+       // actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 
         return actualExtent;
     }
@@ -2011,3 +2071,297 @@ void Rendering::RemoveTexture(ImGuiTextureData* tex_data)
      
     
 }
+
+void Rendering::updateCamera(GLFWwindow* window, float deltaTime)
+{
+
+    static double lastX, lastY;
+
+    if (firstMouse)
+    {
+        glfwGetCursorPos(window, &lastX, &lastY);
+        firstMouse = false;
+    }
+
+    double xpos, ypos;
+    glfwGetCursorPos(window, &xpos, &ypos);
+
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+
+    if (xpos >= width || xpos <= 0 || ypos >= height || ypos <= 0)
+    {
+        glfwSetCursorPos(window, width / 2, height / 2);
+        lastX = width / 2;
+        lastY = height / 2;
+    }
+
+    double deltaX = xpos - lastX;
+    double deltaY = lastY - ypos; // Note: reversed to convert from GLFW coordinates to OpenGL coordinates
+    lastX = xpos;
+    lastY = ypos;
+
+    float sensitivity = 0.1f;
+    cameraYaw += deltaX * sensitivity;
+    cameraPitch += deltaY * sensitivity;
+    if (cameraPitch > 89.0f) cameraPitch = 89.0f;
+    if (cameraPitch < -89.0f) cameraPitch = -89.0f;
+
+    glm::vec3 front;
+    front.x = cos(glm::radians(cameraYaw)) * cos(glm::radians(cameraPitch));
+    front.y = sin(glm::radians(cameraPitch));
+    front.z = sin(glm::radians(cameraYaw)) * cos(glm::radians(cameraPitch));
+    cameraFront = glm::normalize(front);
+
+    // Update the camera position based on the delta of the cursor position
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+    {
+        double deltaPosX = deltaX * sensitivity * cameraSpeed * deltaTime;
+        double deltaPosY = deltaY * sensitivity * cameraSpeed * deltaTime;
+        cameraPosition += glm::normalize(glm::cross(cameraFront, cameraUp)) * (float)deltaPosX;
+        cameraPosition += glm::normalize(cameraUp) * (float)deltaPosY;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        cameraPosition += cameraSpeed * deltaTime * cameraFront;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        cameraPosition -= cameraSpeed * deltaTime * cameraFront;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        cameraPosition -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed * deltaTime;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        cameraPosition += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed * deltaTime;
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) // move camera down
+        cameraPosition -= glm::normalize(cameraUp) * cameraSpeed * deltaTime;
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) // move camera up
+        cameraPosition += glm::normalize(cameraUp) * cameraSpeed * deltaTime;
+   
+}
+
+/*
+
+From here on out the following functions and code are adaptions of the code from Vulkan Tutorial by Alexander Overvoorde.
+Any function postfixed with NEW is a new function I have created to replace the old function.
+
+Eventually I will remove all the tutorial functions and replace them with my own, as and when they need to be replaced by something more advanced.
+
+
+*/
+
+void Rendering::createVulkanMemoryAllocator() {
+
+    VmaAllocatorCreateInfo allocatorInfo{};
+    allocatorInfo.device = device;
+    allocatorInfo.physicalDevice = physicalDevice;
+    allocatorInfo.instance = instance;
+
+    vmaCreateAllocator(&allocatorInfo, &vmaAllocator);
+}
+
+VkImage Rendering::createTextureImageNEW(std::string texturePath) {
+    int texWidth, texHeight, texChannels;
+    stbi_uc* pixels = stbi_load(texturePath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    VkDeviceSize imageSize = texWidth * texHeight * 4;
+    mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
+
+    if (!pixels) {
+        throw std::runtime_error("failed to load texture image!");
+    }
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+    void* data;
+    vkMapMemory(device, stagingBufferMemory, 0, imageSize, 0, &data);
+    memcpy(data, pixels, static_cast<size_t>(imageSize));
+    vkUnmapMemory(device, stagingBufferMemory);
+
+    stbi_image_free(pixels);
+
+    createImage(texWidth, texHeight, mipLevels, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory);
+
+    transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
+    copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+    //transitioned to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
+
+    vkDestroyBuffer(device, stagingBuffer, nullptr);
+    vkFreeMemory(device, stagingBufferMemory, nullptr);
+
+    generateMipmaps(textureImage, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, mipLevels);
+
+    return textureImage;
+}
+
+VkSampler Rendering::createTextureSamplerNEW() {
+
+    VkSampler textureSampler;
+    VkPhysicalDeviceProperties properties{};
+    vkGetPhysicalDeviceProperties(physicalDevice, &properties);
+
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter = VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VK_FILTER_LINEAR;
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.anisotropyEnable = VK_TRUE;
+    samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = static_cast<float>(mipLevels);
+    samplerInfo.mipLodBias = 0.0f;
+
+    if (vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create texture sampler!");
+    }
+    else {
+        return textureSampler;
+    }
+}
+
+
+void Rendering::loadModelDynamically(std::string modelPath, std::string texturePath) {
+
+    //SETUP: Set up variables
+    std::vector<uint32_t> modelIndices;
+    std::vector<Vertex> modelVertices;
+    VkBuffer vertexBuffer;
+    //VkDeviceMemory vertexBufferMemory;
+    VkBuffer stagingBuffer;
+   // VkDeviceMemory stagingBufferMemory;
+    VkBuffer indexBuffer;
+    //VkDeviceMemory indexBufferMemory;
+    VkDeviceSize bufferSize;
+    std::vector<VkDescriptorSet> descriptorSets;
+    void* data;
+    int emptySlot = 0;
+    int size = sizeof(renderedModels) / sizeof(renderedModels[0]); //Find empty slot for this model to occupy
+    for (size_t i = 0; i < size; i++) 
+    {
+        if (renderedModels[i].vertexBuffer == NULL) {
+            emptySlot = i;
+            break;
+        }
+    }
+   
+    //LOAD THE MODEL: Load the model's vertex and index data
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string warn, err;
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, modelPath.c_str())) { throw std::runtime_error(warn + err); }
+    std::unordered_map<Vertex, uint32_t> uniqueVertices{};
+    for (const auto& shape : shapes) {
+        for (const auto& index : shape.mesh.indices) {
+            Vertex vertex{};
+            vertex.pos = {
+                attrib.vertices[3 * index.vertex_index + 0],
+                attrib.vertices[3 * index.vertex_index + 1],
+                attrib.vertices[3 * index.vertex_index + 2]
+            };
+            vertex.texCoord = {
+                attrib.texcoords[2 * index.texcoord_index + 0],
+                1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+            };
+            vertex.color = { 1.0f, 1.0f, 1.0f };
+            if (uniqueVertices.count(vertex) == 0) {
+                uniqueVertices[vertex] = static_cast<uint32_t>(modelVertices.size());
+                modelVertices.push_back(vertex);
+            }
+            modelIndices.push_back(uniqueVertices[vertex]);
+        }
+    }
+   
+    //CREATE THE VERTEX BUFFER: Allocate some memory for the new model's vertexes
+    VkBufferCreateInfo vertexBufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO }; // Define buffer creation info
+    vertexBufferInfo.size = sizeof(modelVertices[0]) * modelVertices.size();
+    vertexBufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    VmaAllocationCreateInfo vertexAllocInfo = {}; // Define allocation info
+    vertexAllocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+    VmaAllocation vertexBufferAllocation;
+    vmaCreateBuffer(vmaAllocator, &vertexBufferInfo, &vertexAllocInfo, &vertexBuffer, &vertexBufferAllocation, nullptr);
+    void* mappedVertexData;  // Map the memory and copy the vertex data to the buffer
+    vmaMapMemory(vmaAllocator, vertexBufferAllocation, &mappedVertexData);
+    memcpy(mappedVertexData, modelVertices.data(), vertexBufferInfo.size);
+    vmaUnmapMemory(vmaAllocator, vertexBufferAllocation);
+
+
+    //CREATE THE INDEX BUFFER: Allocate some memory for the new model's indicies
+    VkBufferCreateInfo indexBufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    indexBufferInfo.size = sizeof(modelIndices[0]) * modelIndices.size();
+    indexBufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    VmaAllocationCreateInfo indexAllocInfo = {}; // Define allocation info
+    indexAllocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+    VmaAllocation indexBufferAllocation;
+    vmaCreateBuffer(vmaAllocator, &indexBufferInfo, &indexAllocInfo, &indexBuffer, &indexBufferAllocation, nullptr);
+    void* mappedIndexData;// Map the memory and copy the index data to the buffer
+    vmaMapMemory(vmaAllocator, indexBufferAllocation, &mappedIndexData);
+    memcpy(mappedIndexData, modelIndices.data(), indexBufferInfo.size);
+    vmaUnmapMemory(vmaAllocator, indexBufferAllocation);
+
+
+    //CREATE THE IMAGE VIEW AND SAMPLER: Create the image view and sampler for the new model
+    VkImage textureImage = createTextureImageNEW(texturePath);
+    VkImageView textureImageView = createImageView(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
+    VkSampler textureSampler = createTextureSamplerNEW();
+
+    //CREATE DESCRIPTOR SETS: Create the descriptor set for each model
+    std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, descriptorSetLayout);
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = descriptorPool;
+    allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    allocInfo.pSetLayouts = layouts.data();
+    
+    descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
+    if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate descriptor sets!");
+    }
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        VkDescriptorBufferInfo bufferInfo{};
+        bufferInfo.buffer = uniformBuffers[i];
+        bufferInfo.offset = 0;
+        bufferInfo.range = sizeof(UniformBufferObject);
+        VkDescriptorImageInfo imageInfo{};
+        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageInfo.imageView = textureImageView;
+        imageInfo.sampler = textureSampler;
+        std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[0].dstSet = descriptorSets[i];
+        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pBufferInfo = &bufferInfo;
+        descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[1].dstSet = descriptorSets[i];
+        descriptorWrites[1].dstBinding = 1;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pImageInfo = &imageInfo;
+        vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+    }
+
+
+    //ADD MODEL TO ARRAY: Add this model to an array of models to be rendered by the command buffer
+    RenderedModel newModel;
+    newModel.vertexBuffer = vertexBuffer;
+    newModel.indexBuffer = indexBuffer;
+    newModel.indices = modelIndices.size();
+    newModel.indexBufferMemory = indexBufferAllocation->GetMemory();
+    newModel.vertexBufferMemory = vertexBufferAllocation->GetMemory();
+    newModel.descriptorSets = descriptorSets;
+    renderedModels[emptySlot] = newModel;
+
+    return;
+}
+
+
+   

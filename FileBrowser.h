@@ -13,6 +13,25 @@ namespace FileBrowser {
         std::string parentPath;
         bool isFolder;
     };
+
+    struct FolderInfo {
+        std::string name;
+        int numFolders;
+        int numFiles;
+        std::string dateModified;
+        std::string dateCreated;
+    };
+
+    struct ModelInfo {
+        std::string name;
+        std::string type;
+        int numPolygons;
+        int numVerts;
+        int numMaterials;
+        long long fileSize;
+    };
+
+
     
     std::vector<DirectoryItem> getGameFiles(const std::string& pathToGameFiles);
     void printGameFiles(std::vector<DirectoryItem> gameFiles);
@@ -25,6 +44,10 @@ namespace FileBrowser {
     bool deleteFileOrFolder(std::wstring path);
 
     bool createDirectory(const std::string& path);
+
+    FolderInfo getFolderInfo(const std::string& path);
+
+    ModelInfo getModelInfo(const std::string& path);
    
 
 }

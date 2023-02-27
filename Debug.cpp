@@ -31,4 +31,13 @@ std::string enumToString(LogSource source)
     }
 }
 
+void Debug::clearLog() {
+
+    logEntries.clear();
+    return;
+
+}
+
+Debug debug;
+
 

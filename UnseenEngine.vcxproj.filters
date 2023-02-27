@@ -19,31 +19,13 @@
     <Filter Include="Source Files\shaders">
       <UniqueIdentifier>{d5d5d037-91be-40c8-9782-5b0f1b475525}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\vendor\imgui">
+      <UniqueIdentifier>{01fe6031-388c-4769-9119-a4af6d65a37b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="UnseenEngine.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\IMGUI\imgui.cpp">
-      <Filter>Source Files\vendor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\IMGUI\imgui_demo.cpp">
-      <Filter>Source Files\vendor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\IMGUI\imgui_draw.cpp">
-      <Filter>Source Files\vendor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\IMGUI\backends\imgui_impl_glfw.cpp">
-      <Filter>Source Files\vendor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\IMGUI\backends\imgui_impl_vulkan.cpp">
-      <Filter>Source Files\vendor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\IMGUI\imgui_tables.cpp">
-      <Filter>Source Files\vendor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\IMGUI\imgui_widgets.cpp">
-      <Filter>Source Files\vendor</Filter>
     </ClCompile>
     <ClCompile Include="EngineUI.cpp">
       <Filter>Source Files</Filter>
@@ -59,6 +41,30 @@
     </ClCompile>
     <ClCompile Include="Debug.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Serialization.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\IMGUI\imgui.cpp">
+      <Filter>Source Files\vendor\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\IMGUI\imgui_demo.cpp">
+      <Filter>Source Files\vendor\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\IMGUI\imgui_draw.cpp">
+      <Filter>Source Files\vendor\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\IMGUI\backends\imgui_impl_glfw.cpp">
+      <Filter>Source Files\vendor\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\IMGUI\backends\imgui_impl_vulkan.cpp">
+      <Filter>Source Files\vendor\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\IMGUI\imgui_tables.cpp">
+      <Filter>Source Files\vendor\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\IMGUI\imgui_widgets.cpp">
+      <Filter>Source Files\vendor\imgui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -86,6 +92,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Debug.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Serialization.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

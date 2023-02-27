@@ -5,6 +5,7 @@
 #include <fstream>
 #include <glfw3.h>
 #include <optional>
+#include "UnseenEngine.h"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -32,7 +33,6 @@ const std::vector<const char*> validationLayers = {
 const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
-
 
 
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
@@ -78,6 +78,15 @@ struct UniformBufferObject {
     alignas(16) glm::mat4 proj;
 };
 
+struct  RenderedModel {
+    VkBuffer vertexBuffer;
+    VkBuffer indexBuffer;
+    uint32_t indices;
+    VkDeviceMemory indexBufferMemory;
+    VkDeviceMemory vertexBufferMemory;
+    std::vector<VkDescriptorSet> descriptorSets;
+};
+
 // A struct to manage data related to one image in vulkan
 struct ImGuiTextureData
 {
@@ -101,9 +110,10 @@ struct ImGuiTextureData
 
 class Rendering {
 public:
-    void start();
+    void start(Entities &entities);
     bool LoadTextureFromFile(const char* filename, ImGuiTextureData* tex_data);
-    void RemoveTexture(ImGuiTextureData* tex_data);
+    void RemoveTexture(ImGuiTextureData* tex_data);   
+    void loadModelDynamically(std::string modelPath, std::string texturePath);
 private:
     GLFWwindow* window;
     VkInstance instance;
@@ -138,10 +148,10 @@ private:
     VkSampler textureSampler;
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
-    VkBuffer vertexBuffer;
-    VkDeviceMemory vertexBufferMemory;
-    VkBuffer indexBuffer;
-    VkDeviceMemory indexBufferMemory;
+   // VkBuffer vertexBuffer;
+    //VkDeviceMemory vertexBufferMemory;
+   // VkBuffer indexBuffer;
+   // VkDeviceMemory indexBufferMemory;
     std::vector<VkBuffer> uniformBuffers;
     std::vector<VkDeviceMemory> uniformBuffersMemory;
     std::vector<void*> uniformBuffersMapped;
@@ -153,7 +163,20 @@ private:
     std::vector<VkFence> inFlightFences;
     uint32_t currentFrame = 0;
 
+    //Imgui
     VkDescriptorPool imguiPool;
+
+    //EditorCamera
+    glm::vec3 cameraPosition = glm::vec3(0.0f, 0.0f, 3.0f);
+    glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+    glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+    float cameraSpeed = 50.0f;
+    float cameraYaw = -90.0f;
+    float cameraPitch = 0.0f;
+    float lastTime;
+    float fov = 45.0f;
+    void updateCamera(GLFWwindow* window, float deltaTime);
+    bool firstMouse = true;
 
 
     bool framebufferResized = false;
@@ -221,6 +244,7 @@ private:
     bool checkValidationLayerSupport();
     static std::vector<char> readFile(const std::string& filename);
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
-   
-
+    VkImage createTextureImageNEW(std::string texturePath);
+    VkSampler createTextureSamplerNEW();
+    void createVulkanMemoryAllocator();
 };

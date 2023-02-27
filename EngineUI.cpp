@@ -9,6 +9,7 @@
 #include <backends/imgui_impl_vulkan.h>
 #include "Rendering.h"
 #include "Debug.h"
+#include "Serialization.h"
 
 
 namespace EngineUI {
@@ -16,11 +17,17 @@ namespace EngineUI {
 
     std::map<std::string, bool> windowState;
     std::string currentFolderPath;
+    std::string currentHoveredItem = "";
+    std::string currentSelectedItem = "";
+    FileBrowser::ModelInfo currentModelQuery;
     std::string rootFolderPath;
     std::vector<FileBrowser::DirectoryItem> gameFiles;
     std::string currentSearch;
+    std::string currentLogSearch;
     std::string renameString;
     std::string newFolderString;
+    bool isNavigatingViewport;
+    bool viewportNavigationGate;
 
     BrowserFocus currentFocus = FileBrowser;
 
@@ -37,21 +44,39 @@ namespace EngineUI {
         windowState["showFileViewer"] = true;
         windowState["showInspector"] = true;
         windowState["showDebugConsole"] = true;
+        windowState["showViewportControls"] = true;
 
         rootFolderPath = std::filesystem::current_path().string() + "\\content";
-
         currentFolderPath = rootFolderPath;
-
         gameFiles = FileBrowser::getGameFiles(rootFolderPath);
-        //FileBrowser::printGameFiles(gameFiles);
 
-        debug.log("hello");
+        debug.log("UI Initialised");
 
         ImGui::StyleColorsClassic();
 
+        Serialization::generateYamlFile(rootFolderPath,"test",674457346353);
+
     }
 
-    std::map<std::string, bool> loopUI(bool& applicationOpen, Rendering* renderer) {
+    bool getIsNavigatingViewport() {
+        return isNavigatingViewport;
+    }
+
+    std::map<std::string, bool> loopUI(bool& applicationOpen, Rendering* renderer, float& cameraSpeed, float& fov, bool& firstMouse) {
+
+        isNavigatingViewport = ImGui::IsMouseDown(ImGuiMouseButton_Right) && !ImGui::IsWindowHovered(ImGuiFocusedFlags_AnyWindow) && !ImGui::IsAnyItemHovered();
+
+        if (isNavigatingViewport) { ImGui::SetMouseCursor(ImGuiMouseCursor_None); }
+
+
+        if (isNavigatingViewport && !viewportNavigationGate) {
+            viewportNavigationGate = true;
+            firstMouse = true;
+        }else if(!isNavigatingViewport && viewportNavigationGate) {
+            viewportNavigationGate = false;
+            firstMouse = false;
+        }
+      
 
         gameFiles = FileBrowser::getGameFiles(rootFolderPath);
 
@@ -77,20 +102,38 @@ namespace EngineUI {
         if (windowState["showInspector"])
         {
             ImGui::Begin("Inspector");
-   
-            //Inspector image preview
-            if (showInspectorImagePreview && inspectorImagePreview.ImageMemory != nullptr && showInspectorImagePreview && inspectorImagePreview.Height != 0 && inspectorImagePreview.Width != 0) {
-                ImGui::Text("pointer = %p", inspectorImagePreview.DS);
-                ImGui::Text("size = %d x %d", inspectorImagePreview.Width, inspectorImagePreview.Height);
-                float resizedWidth = 500;
-                float resizedHeight = inspectorImagePreview.Height / (inspectorImagePreview.Width / resizedWidth);
-                ImGui::Image((ImTextureID)inspectorImagePreview.DS, ImVec2(resizedWidth, resizedHeight));
-            }
-            else if (!showInspectorImagePreview) {
-                switchNewInsectorImage(renderer);
-            }
-            else {
+
+            if (currentSelectedItem == "") {
                 ImGui::Text("Select an entity or file to view details...");
+            }
+            else if(Functions::getFileType(currentSelectedItem) == "image") {
+                //This part just checks if the image is ready to go
+                if (showInspectorImagePreview && inspectorImagePreview.ImageMemory != nullptr && inspectorImagePreview.Height != 0 && inspectorImagePreview.Width != 0) {
+                    ImGui::Text("pointer = %p", inspectorImagePreview.DS);
+                    ImGui::Text("size = %d x %d", inspectorImagePreview.Width, inspectorImagePreview.Height);
+                    float resizedWidth = 500;
+                    float resizedHeight = inspectorImagePreview.Height / (inspectorImagePreview.Width / resizedWidth);
+                    ImGui::Image((ImTextureID)inspectorImagePreview.DS, ImVec2(resizedWidth, resizedHeight));
+                }
+                else if (!showInspectorImagePreview) {
+                    switchNewInsectorImage(renderer);
+                }
+            }
+            else if (Functions::getFileType(currentSelectedItem) == "folder") {
+                
+                FileBrowser::FolderInfo folder = FileBrowser::getFolderInfo(currentSelectedItem);
+                std::string folderInfoString = "Name: " + folder.name + "\nFolders: " + std::to_string(folder.numFolders) + "\nFiles: " + std::to_string(folder.numFiles) + "\nDate Created: " + folder.dateCreated + "\nDate Modified: " + folder.dateModified;
+                ImGui::Text(folderInfoString.c_str());
+            }
+            else if (Functions::getFileType(currentSelectedItem) == "model") {
+
+                if (currentModelQuery.name != Functions::getFileNameFromPath(currentSelectedItem)) {
+                    currentModelQuery = FileBrowser::getModelInfo(currentSelectedItem);
+                }
+               
+                std::string modelInfoString = "Name: " + currentModelQuery.name + "\nType: " + currentModelQuery.type + "\nFile Size: " + Functions::convertBytes(currentModelQuery.fileSize, 'M') + " MB" + "\nMaterial Slots: " + std::to_string(currentModelQuery.numMaterials) + "\nNum Polygons: " + std::to_string(currentModelQuery.numPolygons) + "\nNum Verticies: " + std::to_string(currentModelQuery.numVerts);
+                ImGui::Text(modelInfoString.c_str());
+
             }
 
             ImGui::End();
@@ -124,62 +167,49 @@ namespace EngineUI {
             ImGui::End();
            
         }
+        
 
         //Debug Console
         if (windowState["showDebugConsole"])
         {
-            ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
-            ImGui::Begin("DebugConsole");
-
-            ImGui::Separator();
-
-            ImGui::SetWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
-            ImGui::SetNextWindowSizeConstraints(ImVec2(200, 100), ImVec2(FLT_MAX, FLT_MAX));
-            ImGui::BeginChild("ScrollingRegion", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
-              
-            for (size_t i = 0; i < size(debug.logEntries); i++)
-            {
-
-                std::time_t currentTime = std::chrono::system_clock::to_time_t(debug.logEntries[i].timestamp);
-                std::tm timeInfo;
-                localtime_s(&timeInfo, &currentTime);
-                std::stringstream ss;
-                ss << std::put_time(&timeInfo, "%Y-%m-%d %X");
-                std::string timestampString = ss.str();
-                std::string logMessage = "[" + timestampString + "] " + debug.logEntries[i].logSource + ": " + debug.logEntries[i].message;
-
-                // Define colors based on log type
-                ImVec4 textColor;
-
-
-
-                if (debug.logEntries[i].logType == Error)
-                {
-                    textColor = ImVec4(1.0f, 0.4f, 0.4f, 1.0f);
-                }
-                else if (debug.logEntries[i].logType == Warning)
-                {
-                    textColor = ImVec4(1.0f, 1.0f, 0.4f, 1.0f);
-                }
-                else
-                {
-                    textColor = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-                }
-
-
-
-                ImGui::PushStyleColor(ImGuiCol_Text, textColor);
-                ImGui::Text("[%s] %s: %s", ss.str().c_str(), debug.logEntries[i].logSource.c_str(), debug.logEntries[i].message.c_str());
-                ImGui::PopStyleColor();
-            }
-                
-            ImGui::SetScrollHereY(1.0f);//scroll to bottom
-    
-            
-            ImGui::EndChild();
+           
+            ImGui::Begin("Debug Log", NULL, ImGuiWindowFlags_NoScrollbar);
+            renderLog();
             ImGui::End();
+          
+        }
 
+        //Viewport Controls
+        if (windowState["showViewportControls"])
+        {
 
+            ImGui::Begin("Viewport Controls");
+ 
+           
+            ImGui::PushItemWidth(200);
+            ImGui::SliderFloat("Camera Speed", &cameraSpeed, 1, 1000);
+            ImGui::PopItemWidth();
+
+            ImGui::SameLine();
+
+            ImGui::PushItemWidth(200);
+            ImGui::SliderFloat("FOV", &fov, 1, 180);
+            ImGui::PopItemWidth();
+
+            ImGui::SameLine();
+
+            ImGui::Button("Play");
+
+            ImGui::SameLine();
+
+            ImGui::Button("Pause");
+
+            ImGui::SameLine();
+
+            ImGui::Button("Stop");
+
+            ImGui::End();
+ 
         }
 
         // FileViewer
@@ -188,21 +218,34 @@ namespace EngineUI {
            
             ImGui::Begin("File Browser");
 
-            /*
-            if (ImGui::Selectable(currentFolderPath.c_str(), true, ImGuiSelectableFlags_AllowDoubleClick)) {
-                if (ImGui::IsMouseDoubleClicked(0)) {
-                    std::string path = currentFolderPath;
-                    std::wstring w_file_path(path.begin(), path.end());
-                    ShellExecute(NULL, L"open", L"explorer.exe", w_file_path.c_str(), NULL, SW_SHOWDEFAULT);
+            //File browser options
+            static char buf1[64] = ""; 
+            if (currentFolderPath != rootFolderPath) {
+                if (ImGui::Button("<-")) {
+                    currentFolderPath = FileBrowser::getParentDirectory(currentFolderPath);
                 }
             }
-            */
+            ImGui::SameLine();
+            if (ImGui::Button("Open in Explorer")){
+                openPathInFileExplorer(currentFolderPath);
+            }
+            ImGui::SameLine();
+            ImGui::Button("New Entity");
+            ImGui::SameLine();
+            ImGui::Button("New Material");
+            ImGui::SameLine();
+            if (ImGui::Button("Load new model")) {
+                renderer->loadModelDynamically("C:\\UnseenEngine\\content\\SpiritLens\\models\\metalfish.obj", "C:\\UnseenEngine\\content\\SpiritLens\\models\\metalfish.png");
+                renderer->loadModelDynamically("C:\\UnseenEngine\\content\\SpiritLens\\models\\Clover.obj", "C:\\UnseenEngine\\content\\SpiritLens\\models\\Frog Chair\\froggy.png");
+            }
 
-            //Search bar
-            static char buf1[64] = ""; 
-            ImGui::InputText("Search", buf1, 64, ImGuiInputTextFlags_CallbackEdit, fileSearchCallback, &buf1);
+           
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(200);
+            ImGui::InputText("Search Files", buf1, 64, ImGuiInputTextFlags_CallbackEdit, fileSearchCallback, &buf1);
             
             //Go to parent directory button
+            /*
             if (currentFolderPath != rootFolderPath) {
 
                 std::string path = currentFolderPath;
@@ -217,6 +260,7 @@ namespace EngineUI {
                     }
                 }
             }
+            */
 
 
 
@@ -233,12 +277,15 @@ namespace EngineUI {
                     
                     std::string name = "";
                     name = " - " + item.name;
+                    
+                    bool isSelected = (currentSelectedItem == (item.path));
                                  
-                    if (ImGui::Selectable(name.c_str(), false, ImGuiSelectableFlags_AllowDoubleClick))
+                    if (ImGui::Selectable(name.c_str(), isSelected, ImGuiSelectableFlags_AllowDoubleClick))
                     {
+
+                        currentSelectedItem = item.path;
+
                         if (ImGui::IsMouseDoubleClicked(0)) {
-                            
-                            debug.log("Opening folder: " + item.path);
                             openDirectory(item.path, FileBrowser);
                         }
                     }
@@ -255,18 +302,26 @@ namespace EngineUI {
 
                 if (item.isFolder) { continue; }
 
+
                 if (item.parentPath == currentFolderPath || currentSearch != "") {
 
+              
                     std::string name = "";
                     name = item.name;
 
-                    if (ImGui::Selectable(name.c_str(), ImGui::IsItemClicked(), ImGuiSelectableFlags_AllowDoubleClick)) {
+                    bool isSelected = (currentSelectedItem == item.path);
 
+
+                    if (ImGui::Selectable(name.c_str(),isSelected, ImGuiSelectableFlags_AllowDoubleClick)) {
+
+                        currentSelectedItem = item.path;
 
                         std::string extension = Functions::getFilePathExtension(item.path);
 
                         //If this thing you clicked is an image, load a preview in the inspector
                         if (extension == "jpg" || extension == "png" || extension == "TGA") { prepareNewInspectorImage(item.path, renderer); }
+
+                    
 
                         //If double clicked
                         if (ImGui::IsMouseDoubleClicked(0)) {
@@ -305,6 +360,23 @@ namespace EngineUI {
                            
                         }
                     }
+
+                    //Save current hovered
+                    if (ImGui::IsItemHovered()) {
+                        currentHoveredItem = item.name;
+                    }
+                    //Drag and drop
+                    if (item.name == currentHoveredItem) {
+                        //Drap and drop
+                        if (ImGui::BeginDragDropSource())
+                        {
+                            ImGui::SetDragDropPayload("_TREENODE", NULL, 0);
+                            ImGui::Text(item.name.c_str());
+                            ImGui::EndDragDropSource();
+                        }
+                    }
+
+
 
                     //If right clicking
                     showRightClickDirectoryOptions(item);
@@ -449,11 +521,118 @@ namespace EngineUI {
         }
         return 0;
     }
+   
+    static int editSearchLogCallback(ImGuiInputTextCallbackData* data) {
+
+        if (data->EventFlag == ImGuiInputTextFlags_CallbackEdit) {
+            std::string str(data->Buf, data->Buf + data->BufTextLen);
+            currentLogSearch = str;
+        }
+        return 0;
+    }
+
+
+    void renderLog() {
+        
+        
+        //clear log button
+        if (ImGui::Button("Clear Log")) {
+            debug.clearLog();
+            debug.log("Log cleared");
+        }
+        ImGui::SameLine();
+
+        //Search log
+        std::string defaultSearchText = "";
+        const int searchBufferSize = 64;
+        char searchBuffer[searchBufferSize];
+        strncpy_s(searchBuffer, defaultSearchText.c_str(), searchBufferSize);
+        ImGui::SetNextItemWidth(200);
+        ImGui::InputText("Search Log", searchBuffer, searchBufferSize, ImGuiInputTextFlags_CallbackEdit, editSearchLogCallback, searchBuffer);
+
+        //if no entries, just return
+        if (size(debug.logEntries) < 1) {
+            return;
+        }
+
+        const size_t bufferSize = 1000000; // allocate 1 million characters for the buffer
+        char* buf = new char[bufferSize]; // dynamically allocate buffer
+        size_t offset = 0;
+        size_t windowWidth = ImGui::GetWindowContentRegionWidth();
+
+        for (size_t i = 0; i < size(debug.logEntries); i++)
+        {
+
+            //If we are searching and the search query is not contained within this log message
+            if (currentLogSearch != "" && !Functions::isSubstring(debug.logEntries[i].message, currentLogSearch)) { continue; }
+
+            std::time_t currentTime = std::chrono::system_clock::to_time_t(debug.logEntries[i].timestamp);
+            std::tm timeInfo;
+            localtime_s(&timeInfo, &currentTime);
+
+            std::stringstream ss;
+            ss << std::put_time(&timeInfo, "%X");
+            std::string timestampString = ss.str();
+            std::string logMessage = "[" + timestampString + "] " + debug.logEntries[i].logSource + ": " + debug.logEntries[i].message;
+            float textWidth = estimateTextWidth(logMessage.c_str()) * 14;
+
+            logMessage = Functions::insertNewlines(logMessage, windowWidth / 17); //add newline for text wrapping
+
+            // check if adding the log message would exceed buffer size
+            size_t messageLength = logMessage.length() + 1; // include null terminator
+            if (offset + messageLength >= bufferSize) {
+                break; // exit loop if buffer is full
+            }
+
+            strcpy_s(buf + offset, bufferSize - offset, logMessage.c_str());
+            offset += messageLength - 1; // exclude null terminator
+            if (Functions::countNewlines(logMessage) == 0) {
+                buf[offset++] = '\n'; // append newline character after every log entry
+            }
+
+            //If last line in vector then add a couple more newlines
+            if (i == (size(debug.logEntries) - 1)) {
+                buf[offset++] = '\n';
+                buf[offset++] = '\n';
+                buf[offset++] = '\n';
+            }
+        }
+
+        // null terminate the buffer
+        buf[offset] = '\0';
+
+        //If last input message was on this tick, then scroll to the bottom
+        //All this horrendous text does is check the last logEntry timestamp and see if its equal to the now timesteamp
+        //All the grossness is just c++ verboseness
+        if (std::chrono::system_clock::to_time_t(debug.logEntries[size(debug.logEntries) - 1].timestamp) == std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())){
+            ImGui::SetNextWindowScroll(ImVec2(0.0f, ImGui::GetWindowHeight() *999));
+        }
+        static ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_ReadOnly;
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 20));
+        ImGui::InputTextMultiline("##source", buf, bufferSize, ImVec2(-FLT_MIN, ImGui::GetWindowHeight() - 70), flags);
+        ImGui::PopStyleVar();
+
+        delete[] buf; // deallocate buffer
+
+        
+    }
+
+    float estimateTextWidth(const char* text)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        ImFont* font = io.Fonts->Fonts[0]; // assuming the first font is being used
+
+        ImVec2 size = font->CalcTextSizeA(io.FontGlobalScale, FLT_MAX, 0.0f, text);
+        return size.x;
+    }
 
     void showRightClickDirectoryOptions(FileBrowser::DirectoryItem item) {
 
         if (ImGui::BeginPopupContextItem()) // <-- use last item id as popup id
         {
+
+            currentSelectedItem = item.path;
+
             //Rename
             if (ImGui::Button("Rename")) {
                 ImGui::OpenPopup("Rename");
@@ -554,8 +733,8 @@ namespace EngineUI {
             ImGui::EndPopup();
         }
 
-
-
     }
+
+
 
 }

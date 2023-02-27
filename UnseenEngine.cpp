@@ -2,13 +2,12 @@
 * 
 Engine Setup Instructions:
 
- - Download the repo and instal to the root of a hard disk volume
+ - Download the repo and install to the root of a hard disk volume
  - Download and install Vulkan to the root of the same volume
  - Current dependancies for opening files: Blender 3.4, Paint.Net (but you can change these if you like)
  - Hook up the paths to the exes for an dependant programs
  - In Blender: set splash screen to off
  - In Blender: delete default cube etc the go File > Defaults > Save Startup File (this is so that you don't get them appearing when opening 3d files in blender)
-
 
 
 C++ naming conventions:
@@ -25,6 +24,7 @@ Constants: Constants are named using all uppercase letters, with words separated
 #include "UnseenEngine.h"
 #include "Rendering.h"
 #include "FileBrowser.h"
+#include "Debug.h"
 #include <iostream>
 #include <vector>
 #include <string>
@@ -33,10 +33,16 @@ Constants: Constants are named using all uppercase letters, with words separated
 bool engineInitialised_ = false;
 
 int main() {
+
     Rendering renderer;
+    Entities entities;
+
+    entities.id[0] = 29;
+
+    debug.log(std::to_string(entities.id[0]));
 
     try {
-        renderer.start();
+        renderer.start(entities);
     }
     catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
@@ -48,12 +54,11 @@ int main() {
 
 
 void engineLoop() {
-
+    //debug.log("loop");
 }
 
 void initEngine() {
 
     engineInitialised_ = true;
-    std::cout << "Engine Initialised" << std::endl;
   
 }
